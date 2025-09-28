@@ -215,16 +215,20 @@
             const progressBar = player.querySelector('.progress__filled');
             const toggle = player.querySelector('.toggle');
             const skipButtons = player.querySelectorAll('[data-skip]');
-            const ranges = player.querySelectorAll('.player__slider');
+            const ranges = player.querySelectorAll('.player__slider'); // Keep ranges for iteration
+
+            // FIX: Get Volume and Speed controls directly by ID to avoid using namedItem on NodeList
+            const volumeControl = document.getElementById('volume-control');
+            const speedControl = document.getElementById('speed-control');
 
             // 1b. Get Clock Elements
             const secondHand = document.getElementById('second-hand');
             const minuteHand = document.getElementById('minute-hand');
             const hourHand = document.getElementById('hour-hand');
 
-            // Set initial volume and speed for ranges
-            video.volume = ranges.namedItem('volume').value;
-            video.playbackRate = ranges.namedItem('playbackRate').value;
+            // Set initial volume and speed for ranges (FIXED)
+            video.volume = volumeControl.value;
+            video.playbackRate = speedControl.value;
             
             // 2. Build out functions
             
