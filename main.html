@@ -1,74 +1,351 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>JS + CSS Clock</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Custom HTML Video Player</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom font and base styles */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+        }
+
+        /* 1. Player Container */
+        .player {
+            max-width: 800px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            position: relative;
+            font-size: 0; /* Prevents gaps from inline-block elements */
+        }
+
+        /* Video element styling */
+        .viewer {
+            width: 100%;
+            background: #000;
+        }
+
+        /* 2. Progress Bar Styling (Crucial for visual progress) */
+        .progress {
+            height: 10px;
+            background: #c3c3c3;
+            cursor: pointer;
+            transition: height 0.1s ease-in-out;
+            margin-top: -10px; /* Overlap slightly with video for clean look */
+        }
+        .progress:hover {
+            height: 15px;
+        }
+
+        /* The filling element */
+        .progress__filled {
+            width: 0%;
+            background: #2563eb; /* Blue color */
+            height: 100%;
+            transition: width 0.1s;
+        }
+
+        /* Range Input Styling (Webkit/Firefox overrides for consistency) */
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 100px;
+            height: 8px;
+            background: #d1d5db;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 0 10px;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #2563eb;
+        }
+        input[type=range]::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #2563eb;
+            border: none;
+        }
+
+        /* --- Clock Styles Start --- */
+        .clock {
+            position: relative;
+        }
+        .hand {
+            position: absolute;
+            /* Center the pivot point */
+            top: 50%;
+            left: 50%;
+            /* Translate back by 50% to align the center, and rotate from the base (100% of the hand's length) */
+            transform: translate(-50%, -50%) rotate(90deg); 
+            transform-origin: 100%; 
+            border-radius: 4px;
+            /* Smoother movement for the second hand */
+            transition: all 0.05s cubic-bezier(0.1, 2.7, 0.58, 1);
+        }
+
+        .hour-hand {
+            background: #4b5563;
+            width: 30%;
+            height: 6px;
+            z-index: 3;
+        }
+        .minute-hand {
+            background: #1f2937;
+            width: 40%;
+            height: 4px;
+            z-index: 2;
+        }
+        .second-hand {
+            background: #ef4444;
+            width: 45%;
+            height: 2px;
+            z-index: 4;
+        }
+        /* --- Clock Styles End --- */
+    </style>
 </head>
-<body>
+<body class="min-h-screen flex flex-col items-center justify-center p-4">
 
-
-    <div class="clock">
-      <div class="clock-face">
-        <div class="hand hour-hand"></div>
-        <div class="hand min-hand"></div>
-        <div class="hand second-hand"></div>
-      </div>
+    <!-- Analog Clock Container -->
+    <div class="clock-wrap w-64 h-64 mx-auto mt-8 mb-8">
+        <div class="clock bg-white rounded-full shadow-2xl relative border-8 border-gray-900 w-full h-full">
+            <div class="hand hour-hand" id="hour-hand"></div>
+            <div class="hand minute-hand" id="minute-hand"></div>
+            <div class="hand second-hand" id="second-hand"></div>
+            <div class="w-4 h-4 bg-gray-900 rounded-full absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10"></div>
+        </div>
     </div>
 
+    <!-- Custom Video Player -->
+    <div class="player rounded-xl overflow-hidden bg-gray-900">
+        
+        <!-- Video Element -->
+        <!-- NOTE: The video starts muted/paused to prevent autoplay policy issues in browsers. -->
+        <video 
+            class="viewer w-full" 
+            src="download.mp4" 
+            muted 
+            playsinline
+        ></video>
 
-  <style>
-    html {
-      background: #018DED url(https://unsplash.it/1500/1000?image=881&blur=5);
-      background-size: cover;
-      font-family: 'helvetica neue';
-      text-align: center;
-      font-size: 10px;
-    }
+        <!-- Progress Bar (Component 1) -->
+        <div class="progress" id="progress-bar">
+            <div class="progress__filled" id="progress-filled"></div>
+        </div>
 
-    body {
-      margin: 0;
-      font-size: 2rem;
-      display: flex;
-      flex: 1;
-      min-height: 100vh;
-      align-items: center;
-    }
+        <!-- Controls Container -->
+        <div class="player__controls flex items-center justify-between p-4 bg-gray-800 text-white">
 
-    .clock {
-      width: 30rem;
-      height: 30rem;
-      border: 20px solid white;
-      border-radius: 50%;
-      margin: 50px auto;
-      position: relative;
-      padding: 2rem;
-      box-shadow:
-        0 0 0 4px rgba(0,0,0,0.1),
-        inset 0 0 0 3px #EFEFEF,
-        inset 0 0 10px black,
-        0 0 10px rgba(0,0,0,0.2);
-    }
+            <!-- Left Controls: Skip and Play/Pause -->
+            <div class="flex items-center space-x-3">
+                <!-- Skip Back (Component 5) -->
+                <button 
+                    data-skip="-10" 
+                    class="player__button rounded-md bg-gray-700 hover:bg-gray-600 p-2 text-sm font-semibold transition"
+                    title="Rewind 10s"
+                >
+                    &laquo; 10s
+                </button>
+                
+                <!-- Play/Pause Toggle (Component 2) -->
+                <button 
+                    class="player__button toggle text-3xl font-extrabold px-3 py-1 rounded-full bg-blue-600 hover:bg-blue-700 transition"
+                    title="Toggle Play"
+                    id="play-pause-btn"
+                >
+                    ►
+                </button>
+                
+                <!-- Skip Forward (Component 5) -->
+                <button 
+                    data-skip="25" 
+                    class="player__button rounded-md bg-gray-700 hover:bg-gray-600 p-2 text-sm font-semibold transition"
+                    title="Skip 25s"
+                >
+                    25s &raquo;
+                </button>
+            </div>
 
-    .clock-face {
-      position: relative;
-      width: 100%;
-      height: 100%;
-      transform: translateY(-3px); /* account for the height of the clock hands */
-    }
+            <!-- Right Controls: Volume and Speed -->
+            <div class="flex items-center space-x-2 text-sm">
+                
+                <!-- Volume Control (Component 3) -->
+                <span class="text-gray-400">Vol</span>
+                <input 
+                    type="range" 
+                    name="volume" 
+                    id="volume-control"
+                    class="player__slider" 
+                    min="0" 
+                    max="1" 
+                    step="0.05" 
+                    value="0.5"
+                >
 
-    .hand {
-      width: 50%;
-      height: 6px;
-      background: black;
-      position: absolute;
-      top: 50%;
-      transform-origin: 100%;
-      transform: rotate(90deg);
-      transition: all 0.05s;
-      transition-timing-function: cubic-bezier(0.1, 2.7, 0.58, 1);
-    }
-</style>
+                <!-- Playback Speed Control (Component 4) -->
+                <span class="text-gray-400">Speed</span>
+                <input 
+                    type="range" 
+                    name="playbackRate" 
+                    id="speed-control"
+                    class="player__slider" 
+                    min="0.5" 
+                    max="2" 
+                    step="0.25" 
+                    value="1"
+                >
+            </div>
+        </div>
+    </div>
 
-<script src="./script.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // 1. Get Video Player Elements
+            const player = document.querySelector('.player');
+            const video = player.querySelector('.viewer');
+            const progress = player.querySelector('.progress');
+            const progressBar = player.querySelector('.progress__filled');
+            const toggle = player.querySelector('.toggle');
+            const skipButtons = player.querySelectorAll('[data-skip]');
+            const ranges = player.querySelectorAll('.player__slider');
+
+            // 1b. Get Clock Elements
+            const secondHand = document.getElementById('second-hand');
+            const minuteHand = document.getElementById('minute-hand');
+            const hourHand = document.getElementById('hour-hand');
+
+            // Set initial volume and speed for ranges
+            video.volume = ranges.namedItem('volume').value;
+            video.playbackRate = ranges.namedItem('playbackRate').value;
+            
+            // 2. Build out functions
+            
+            /**
+             * Clock Function: Rotates the hands based on current time.
+             */
+            function setClock() {
+                const now = new Date();
+                const seconds = now.getSeconds();
+                const minutes = now.getMinutes();
+                const hours = now.getHours() % 12; // Use 12-hour format (0-11)
+
+                // Calculate rotation in degrees (Adding 90deg offset because hands are styled to point right initially)
+                // Second hand moves 6 deg per second (360/60)
+                const secondsDegrees = (seconds / 60) * 360 + 90;
+                
+                // Minute hand moves 6 deg per minute (360/60) + small amount for seconds
+                const minutesDegrees = (minutes / 60) * 360 + (seconds / 60) * 6 + 90;
+                
+                // Hour hand moves 30 deg per hour (360/12) + small amount for minutes
+                const hoursDegrees = (hours / 12) * 360 + (minutes / 60) * 30 + 90;
+
+                // Apply transforms (keeping the translate(-50%, -50%) for centering the pivot)
+                secondHand.style.transform = `translate(-50%, -50%) rotate(${secondsDegrees}deg)`;
+                minuteHand.style.transform = `translate(-50%, -50%) rotate(${minutesDegrees}deg)`;
+                hourHand.style.transform = `translate(-50%, -50%) rotate(${hoursDegrees}deg)`;
+            }
+
+            /**
+             * Toggles between play and pause states.
+             */
+            function togglePlay() {
+                if (video.paused || video.ended) {
+                    video.muted = false; // Unmute on first play
+                    video.play();
+                } else {
+                    video.pause();
+                }
+            }
+
+            /**
+             * Updates the text of the play/pause button (Component 2).
+             */
+            function updateButton() {
+                const icon = video.paused ? '►' : '❚ ❚';
+                toggle.textContent = icon;
+            }
+
+            /**
+             * Skips video forward or backward based on the button's data-skip attribute (Component 5).
+             */
+            function skip() {
+                const skipTime = parseFloat(this.dataset.skip);
+                video.currentTime += skipTime;
+            }
+
+            /**
+             * Handles changes in volume and playback rate sliders (Components 3 & 4).
+             */
+            function handleRangeUpdate() {
+                video[this.name] = this.value;
+            }
+
+            /**
+             * Updates the progress bar width based on video time (Component 1).
+             */
+            function handleProgress() {
+                const percent = (video.currentTime / video.duration) * 100;
+                progressBar.style.width = `${percent}%`;
+            }
+
+            let mousedown = false;
+
+            /**
+             * Seeks the video time when the progress bar is clicked/dragged.
+             */
+            function scrub(e) {
+                // Calculate time based on click position relative to progress bar width
+                const scrubTime = (e.offsetX / progress.offsetWidth) * video.duration;
+                if (!isNaN(scrubTime)) { // Check if scrubTime is valid (video.duration is loaded)
+                    video.currentTime = scrubTime;
+                }
+            }
+
+            // 3. Hook up event listeners
+
+            // Clock Initialization
+            setClock();
+            setInterval(setClock, 1000); // Update clock every second
+
+            // Video Player Listeners
+            video.addEventListener('click', togglePlay);
+            toggle.addEventListener('click', togglePlay);
+
+            video.addEventListener('play', updateButton);
+            video.addEventListener('pause', updateButton);
+
+            video.addEventListener('timeupdate', handleProgress);
+
+            ranges.forEach(range => range.addEventListener('change', handleRangeUpdate));
+            ranges.forEach(range => range.addEventListener('mousemove', handleRangeUpdate));
+
+            skipButtons.forEach(button => button.addEventListener('click', skip));
+
+            progress.addEventListener('click', scrub);
+            
+            progress.addEventListener('mousedown', () => mousedown = true);
+            progress.addEventListener('mouseup', () => mousedown = false);
+            progress.addEventListener('mousemove', (e) => mousedown && scrub(e));
+
+            // 4. Edge Case Handling: Video Load Error (Optional/Bonus)
+            video.addEventListener('error', (e) => {
+                console.error("Video load error:", e);
+                player.style.backgroundColor = '#fee2e2';
+                player.style.color = '#ef4444';
+                video.style.display = 'none';
+                alert("Error loading video: 'download.mp4' may be missing or corrupted.");
+            });
+
+        });
+    </script>
+
 </body>
 </html>
